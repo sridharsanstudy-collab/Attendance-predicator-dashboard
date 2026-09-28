@@ -29,6 +29,9 @@ jobs:
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v5
+        with:
+          # Auto-enable Pages for this repo on the first successful run.
+          enablement: true
 
       - name: Stage site
         run: |
