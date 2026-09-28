@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Predictor Dashboard - Phase 2</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e',
+              purple: '#8b5cf6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .light .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.8);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 pb-16">
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+        <i class="fa-solid fa-graduation-cap text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          Attendance Predictor Pro
+          <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Phase 2</span>
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Semester Window: <span class="text-slate-300 font-medium">29 Aug 2026 – 29 Nov 2026</span></p>
+      </div>
+    </div>
+
+    <!-- Controls Header -->
+    <div class="flex items-center space-x-3 text-sm">
+      <!-- Section Selector -->
+      <div class="flex items-center space-x-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 py-1.5">
+        <i class="fa-solid fa-users text-slate-400 text-xs"></i>
+        <select id="sectionSelect" onchange="switchSection(this.value)" class="bg-transparent text-slate-200 font-medium text-xs sm:text-sm focus:outline-none cursor-pointer">
+          <option value="III ECE-A" class="bg-slate-900">III ECE-A</option>
+          <option value="III ECE-B" class="bg-slate-900">III ECE-B</option>
+          <option value="III CSE-A" class="bg-slate-900">III CSE-A</option>
+          <option value="III CSE-B" class="bg-slate-900">III CSE-B</option>
+          <option value="III MECH" class="bg-slate-900">III MECH</option>
+          <option value="III CIVIL" class="bg-slate-900">III CIVIL</option>
+          <option value="III EEE" class="bg-slate-900">III EEE</option>
+          <option value="II CSE-A" class="bg-slate-900">II CSE-A</option>
+          <option value="IV ECE-A" class="bg-slate-900">IV ECE-A</option>
+          <option value="III IT" class="bg-slate-900">III IT</option>
+        </select>
+      </div>
+
+      <!-- Target Date Picker -->
+      <div class="hidden sm:flex items-center space-x-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 py-1.5">
+        <i class="fa-solid fa-calendar-day text-slate-400 text-xs"></i>
+        <span class="text-xs text-slate-400">Target:</span>
+        <input type="date" id="targetDatePicker" min="2026-08-29" max="2026-11-29" value="2026-11-29" onchange="updateCalculations()" class="bg-transparent text-slate-200 font-medium text-xs focus:outline-none cursor-pointer" />
+      </div>
+
+      <!-- Quick Reset & Print Buttons -->
+      <button onclick="resetData()" title="Reset to Defaults" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+        <i class="fa-solid fa-rotate-right text-xs"></i>
+      </button>
+      <button onclick="window.print()" title="Print Summary" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+        <i class="fa-solid fa-print text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+
+    <!-- Top KPI Highlights -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Current Overall % -->
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Overall Attendance</p>
+          <h3 id="kpiOverallPct" class="text-2xl font-black text-slate-100 mt-1">0.0%</h3>
+          <p id="kpiOverallStatus" class="text-xs font-semibold text-emerald-400 mt-0.5">Healthy</p>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <i class="fa-solid fa-chart-pie text-xl"></i>
+        </div>
+      </div>
+
+      <!-- Max Possible % -->
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Max Possible %</p>
+          <h3 id="kpiMaxPossible" class="text-2xl font-black text-indigo-400 mt-1">0.0%</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Assuming 100% future attendance</p>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+        </div>
+      </div>
+
+      <!-- Classes Missable for 75% -->
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Safe Bunks Left (75% Goal)</p>
+          <h3 id="kpiSafeBunks" class="text-2xl font-black text-amber-400 mt-1">0 hrs</h3>
+          <p id="kpiSafeBunksSub" class="text-xs text-slate-400 mt-0.5">Across remaining timeline</p>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <i class="fa-solid fa-bed text-xl"></i>
+        </div>
+      </div>
+
+      <!-- OD / Medical Credits -->
+      <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Applied OD / Leave Days</p>
+          <h3 id="kpiODCount" class="text-2xl font-black text-emerald-400 mt-1">0 Days</h3>
+          <p id="kpiODImpact" class="text-xs text-emerald-400 mt-0.5">+0.0% boosted</p>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <i class="fa-solid fa-notes-medical text-xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Irreversible Detention Warning (Dynamically Shown) -->
+    <div id="detentionAlertBanner" class="hidden p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 flex items-start gap-3 shadow-lg shadow-rose-950/40">
+      <div class="p-2 rounded-lg bg-rose-500/20 text-rose-400 flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+      </div>
+      <div>
+        <h4 class="font-bold text-sm text-rose-200">Irreversible Detention Alert!</h4>
+        <p id="detentionAlertText" class="text-xs text-rose-300/90 mt-1 leading-relaxed">
+          One or more subjects have dropped below the 75% threshold with no mathematical possibility to recover before the target date. Immediate academic counseling is advised.
+        </p>
+      </div>
+    </div>
+
+    <!-- Visual Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Overall Health Gauge / Radar Chart -->
+      <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-compass text-blue-400"></i> Overall Health Radar
+          </h3>
+          <span class="text-xs text-slate-400">Target Comparison</span>
+        </div>
+        <div class="relative h-64 w-full flex items-center justify-center">
+          <canvas id="healthRadarChart"></canvas>
+        </div>
+        <div class="flex justify-around text-xs text-slate-400 pt-2 border-t border-slate-800">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Current</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Target (75%)</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Max Possible</span>
+        </div>
+      </div>
+
+      <!-- Subject-wise Attendance Breakdown Bar Chart -->
+      <div class="lg:col-span-2 glass-card rounded-2xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-indigo-400"></i> Subject Breakdown vs 75% Threshold
+          </h3>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">≥75% Safe</span>
+            <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">70-75% Warning</span>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">&lt;70% Danger</span>
+          </div>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="subjectBarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- OD & Medical Leave Simulator Module -->
+    <div class="glass-card rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-calculator text-emerald-400"></i> OD & Medical Leave Simulator
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Test how On-Duty (OD) approvals or Medical Leave (ML) waivers boost your attendance live.</p>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+          <button id="modeODBtn" onclick="setLeaveMode('OD')" class="px-3 py-1.5 rounded-lg font-semibold transition bg-emerald-600 text-white">
+            <i class="fa-solid fa-id-card mr-1"></i> OD Adds Attended (A + OD)
+          </button>
+          <button id="modeMLBtn" onclick="setLeaveMode('ML')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition">
+            <i class="fa-solid fa-stethoscope mr-1"></i> ML Waives Conducted (C - ML)
+          </button>
+        </div>
+      </div>
+
+      <!-- Simulator Inputs -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+        <!-- Date Range Simulator -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Simulate Leave Date Range</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="date" id="simStartDate" value="2026-09-29" min="2026-08-29" max="2026-11-29" onchange="runLeaveSimulation()" class="bg-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700 focus:border-emerald-500 focus:outline-none" />
+            <input type="date" id="simEndDate" value="2026-10-01" min="2026-08-29" max="2026-11-29" onchange="runLeaveSimulation()" class="bg-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700 focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">Calculates missed classes based on timetable.</span>
+        </div>
+
+        <!-- Global OD/ML Override Hours -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Manual Flat Leave Days/Hours</label>
+          <div class="flex items-center space-x-2">
+            <input type="number" id="simFlatHours" value="0" min="0" max="50" oninput="runLeaveSimulation()" class="w-full bg-slate-800 text-slate-200 text-xs rounded-lg px-3 py-1.5 border border-slate-700 focus:border-emerald-500 focus:outline-none" placeholder="e.g. 3 days" />
+            <span class="text-xs text-slate-400 whitespace-nowrap">Days</span>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">Assuming ~5 hours/day across all active subjects.</span>
+        </div>
+
+        <!-- Simulation Output Summary -->
+        <div class="flex flex-col justify-center bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-3">
+          <span class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Simulated Overall Health</span>
+          <div class="flex items-baseline gap-2 mt-0.5">
+            <span id="simResultPct" class="text-2xl font-black text-emerald-300">0.0%</span>
+            <span id="simDiffPct" class="text-xs font-bold text-emerald-400">(+0.0%)</span>
+          </div>
+          <p id="simResultStatus" class="text-[11px] text-slate-300 mt-0.5">Ready to simulate leave impact.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Interactive Attendance Table -->
+    <div class="glass-card rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-table-list text-blue-400"></i> Subject-wise Details & Requirements
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Edit Conducted (C) and Attended (A) values. Remaining classes (R) are auto-computed based on timetable.</p>
+        </div>
+        <div class="text-xs text-slate-400">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>≥75%
+          <span class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-3 mr-1"></span>70-74%
+          <span class="inline-block w-2 h-2 rounded-full bg-rose-400 ml-3 mr-1"></span>&lt;70%
+        </div>
+      </div>
+
+      <!-- Table Scroll Wrapper -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-3 rounded-l-lg">Subject</th>
+              <th class="py-3 px-2 text-center">Conducted (C)</th>
+              <th class="py-3 px-2 text-center">Attended (A)</th>
+              <th class="py-3 px-2 text-center">OD/ML Days</th>
+              <th class="py-3 px-2 text-center">Remaining (R)</th>
+              <th class="py-3 px-2 text-center">Current %</th>
+              <th class="py-3 px-2 text-center">Req for 75%</th>
+              <th class="py-3 px-2 text-center">Req for 90%</th>
+              <th class="py-3 px-2 text-center">Safe Bunks</th>
+              <th class="py-3 px-2 text-center rounded-r-lg">Max Possible</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody" class="divide-y divide-slate-800/60 font-medium">
+            <!-- Dynamic Subject Rows Injected via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Floating AI Assistant Chat Bot -->
+  <div id="chatWidgetContainer" class="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    
+    <!-- Chat Window Popover -->
+    <div id="chatWindow" class="hidden mb-4 w-80 sm:w-96 h-[480px] glass-card rounded-2xl shadow-2xl flex flex-col border border-slate-700/80 overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+      
+      <!-- Chat Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-3.5 text-white flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+            <i class="fa-solid fa-robot text-sm"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Attendance Advisor AI</h4>
+            <p class="text-[10px] text-blue-100/80 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Context-Aware Math Engine
+            </p>
+          </div>
+        </div>
+        <button onclick="toggleChatWindow()" class="text-white/80 hover:text-white p-1 rounded-lg transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Chat Messages Scroll Container -->
+      <div id="chatMessages" class="flex-1 p-3.5 space-y-3 overflow-y-auto text-xs bg-slate-950/60">
+        <!-- Initial Welcome Message -->
+        <div class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="bg-slate-800/90 text-slate-200 p-2.5 rounded-2xl rounded-tl-none border border-slate-700/60 leading-relaxed max-w-[85%]">
+            Hello! I am your <strong>Attendance Advisor</strong>. I have read your current dashboard metrics for section <span id="chatSectionTag" class="text-blue-400 font-bold">III ECE-A</span>.<br/><br/>
+            Ask me anything like:
+            <ul class="list-disc ml-4 mt-1 text-[11px] text-slate-300 space-y-0.5">
+              <li>"If I take 3-day sick leave starting tomorrow, will Chemistry drop below 75%?"</li>
+              <li>"Which subject is in the danger zone?"</li>
+              <li>"Can I skip classes on Friday?"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="px-3 py-1.5 bg-slate-900 border-t border-slate-800/80 flex gap-1.5 overflow-x-auto no-scrollbar text-[10px]">
+        <button onclick="sendQuickPrompt('Will I drop below 75% if I take a 3-day sick leave starting tomorrow?')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full whitespace-nowrap border border-slate-700/60 transition">
+          3-day sick leave check?
+        </button>
+        <button onclick="sendQuickPrompt('Which subjects are currently in danger zone below 75%?')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full whitespace-nowrap border border-slate-700/60 transition">
+          Danger zone subjects?
+        </button>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+        <input type="text" id="chatInput" onkeydown="if(event.key === 'Enter') handleUserMessage()" placeholder="Ask AI Advisor..." class="flex-1 bg-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:border-blue-500" />
+        <button onclick="handleUserMessage()" class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition shadow-md shadow-blue-600/30">
+          <i class="fa-solid fa-paper-plane text-xs"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Trigger Button -->
+    <button onclick="toggleChatWindow()" class="h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center text-xl hover:scale-105 active:scale-95 transition-transform duration-200 relative group">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <span class="absolute -top-1 -right-1 flex h-4 w-4">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-950"></span>
+      </span>
+    </button>
+  </div>
+
+  <script>
+    // ==========================================
+    // DATA & STATE MANAGEMENT
+    // ==========================================
+    const SEMESTER_START = new Date("2026-08-29");
+    const SEMESTER_END = new Date("2026-11-29");
+
+    // Timetable schedules per section (0: Sun, 1: Mon, ... 6: Sat)
+    const SECTION_TIMETABLES = {
+      "III ECE-A": {
+        "VLSI Design": [1, 3, 5], // 1 hour on Mon, Wed, Fri
+        "Embedded Systems": [2, 4],
+        "Digital Signal Processing": [1, 2, 4],
+        "Antennas & Wave Propagation": [3, 5],
+        "Communication Networks": [1, 3, 4]
+      },
+      "III ECE-B": {
+        "VLSI Design": [2, 4],
+        "Embedded Systems": [1, 3, 5],
+        "Digital Signal Processing": [1, 3],
+        "Antennas & Wave Propagation": [2, 4, 5],
+        "Communication Networks": [2, 3, 5]
+      },
+      "III CSE-A": {
+        "Data Structures & Algorithms": [1, 3, 5],
+        "Operating Systems": [2, 4],
+        "Database Systems": [1, 2, 4],
+        "Computer Networks": [3, 5],
+        "Software Engineering": [1, 4]
+      },
+      "III CSE-B": {
+        "Data Structures & Algorithms": [2, 4],
+        "Operating Systems": [1, 3, 5],
+        "Database Systems": [2, 3, 5],
+        "Computer Networks": [1, 4],
+        "Software Engineering": [2, 5]
+      },
+      "III MECH": {
+        "Thermodynamics": [1, 3, 5],
+        "Fluid Mechanics": [2, 4],
+        "Heat Transfer": [1, 2, 4],
+        "Manufacturing Process": [3, 5],
+        "Kinematics of Machinery": [1, 4]
+      },
+      "III CIVIL": {
+        "Structural Analysis": [1, 3, 5],
+        "Concrete Technology": [2, 4],
+        "Geotechnical Engg": [1, 2, 4],
+        "Environmental Engg": [3, 5],
+        "Surveying": [1, 4]
+      },
+      "III EEE": {
+        "Power Systems": [1, 3, 5],
+        "Control Systems": [2, 4],
+        "Electrical Machines": [1, 2, 4],
+        "Power Electronics": [3, 5],
+        "Renewable Energy": [1, 4]
+      },
+      "II CSE-A": {
+        "Discrete Math": [1, 3, 5],
+        "Object Oriented Prog": [2, 4],
+        "Digital Logic": [1, 2, 4],
+        "Data Structures": [3, 5],
+        "Environmental Science": [1, 4]
+      },
+      "IV ECE-A": {
+        "Wireless Comm": [1, 3, 5],
+        "Optical Comm": [2, 4],
+        "Satellite Comm": [1, 2, 4],
+        "VLSI Testing": [3, 5],
+        "Project Work": [1, 4]
+      },
+      "III IT": {
+        "Web Technologies": [1, 3, 5],
+        "Cloud Computing": [2, 4],
+        "Information Security": [1, 2, 4],
+        "Machine Learning": [3, 5],
+        "Mobile App Dev": [1, 4]
+      }
+    };
+
+    // Default Conducted (C) and Attended (A) per section
+    let currentSection = "III ECE-A";
+    let leaveMode = "OD"; // "OD" (A+OD) or "ML" (C-ML)
+    
+    // Store user edited data in state
+    let appState = {};
+
+    // Chart References
+    let healthRadarChart = null;
+    let subjectBarChart = null;
+
+    // Initialize State from LocalStorage or Defaults
+    function initAppState() {
+      const saved = localStorage.getItem("attendance_app_state_v2");
+      if (saved) {
+        try {
+          appState = JSON.parse(saved);
+        } catch (e) {
+          appState = {};
+        }
+      }
+
+      // Ensure defaults exist for all sections
+      Object.keys(SECTION_TIMETABLES).forEach(sec => {
+        if (!appState[sec]) {
+          appState[sec] = {};
+          Object.keys(SECTION_TIMETABLES[sec]).forEach(subj => {
+            appState[sec][subj] = {
+              C: 32, // Conducted so far
+              A: 26, // Attended so far
+              OD: 0  // Approved OD/Medical days
+            };
+          });
+        }
+      });
+    }
+
+    function saveAppState() {
+      localStorage.setItem("attendance_app_state_v2", JSON.stringify(appState));
+    }
+
+    // Calculate remaining classes R between dates for a subject based on weekly schedule
+    function calculateRemainingClasses(subject, section, fromDateStr, toDateStr) {
+      const schedule = SECTION_TIMETABLES[section]?.[subject] || [1, 3, 5];
+      let fromDate = new Date(fromDateStr);
+      let toDate = new Date(toDateStr);
+      
+      if (fromDate > toDate) return 0;
+      
+      let count = 0;
+      let curr = new Date(fromDate);
+      while (curr <= toDate) {
+        const day = curr.getDay(); // 0-6
+        if (schedule.includes(day)) {
+          count++;
+        }
+        curr.setDate(curr.getDate() + 1);
+      }
+      return count;
+    }
+
+    // Core Calculation & UI Render Function
+    function updateCalculations() {
+      const targetDateVal = document.getElementById("targetDatePicker").value || "2026-11-29";
+      const todayStr = "2026-09-28"; // Fixed current timeline anchor as specified
+      
+      const secData = appState[currentSection];
+      const tbody = document.getElementById("attendanceTableBody");
+      tbody.innerHTML = "";
+
+      let totalC = 0;
+      let totalA = 0;
+      let totalR = 0;
+      let totalOD = 0;
+
+      let hasIrreversibleDetention = false;
+      const chartLabels = [];
+      const currentPcts = [];
+      const maxPcts = [];
+
+      Object.keys(secData).forEach(subj => {
+        let { C, A, OD } = secData[subj];
+        C = Number(C) || 0;
+        A = Number(A) || 0;
+        OD = Number(OD) || 0;
+
+        // Apply leave mode formula
+        let effectiveC = C;
+        let effectiveA = A;
+        if (leaveMode === "OD") {
+          effectiveA = A + OD; // OD adds to attended
+        } else {
+          effectiveC = Math.max(1, C - OD); // ML waives conducted count
+        }
+
+        const R = calculateRemainingClasses(subj, currentSection, todayStr, targetDateVal);
+
+        // Core Formulas
+        const currentPct = effectiveC > 0 ? (effectiveA / effectiveC) * 100 : 0;
+        
+        // Req for 75%: x = ceil(0.75 * (C + R) - A)
+        let req75 = Math.ceil(0.75 * (effectiveC + R) - effectiveA);
+        if (req75 <= 0) req75 = 0;
+
+        // Req for 90%: x = ceil(0.90 * (C + R) - A)
+        let req90 = Math.ceil(0.90 * (effectiveC + R) - effectiveA);
+        if (req90 <= 0) req90 = 0;
+
+        // Safe Bunks: R - req75
+        let safeBunks = R - req75;
+        let isIrreversible = false;
+        
+        // Max Possible % = ((A + R) / (C + R)) * 100
+        const maxPossible = ((effectiveA + R) / (effectiveC + R)) * 100;
+
+        if (maxPossible < 75) {
+          isIrreversible = true;
+          hasIrreversibleDetention = true;
+          safeBunks = 0;
+        }
+
+        totalC += effectiveC;
+        totalA += effectiveA;
+        totalR += R;
+        totalOD += OD;
+
+        chartLabels.push(subj);
+        currentPcts.push(Number(currentPct.toFixed(1)));
+        maxPcts.push(Number(maxPossible.toFixed(1)));
+
+        // Color tags
+        let statusBadgeClass = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+        if (currentPct < 70) {
+          statusBadgeClass = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+        } else if (currentPct < 75) {
+          statusBadgeClass = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+        }
+
+        // Render Row
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/40";
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-semibold text-slate-100">${subj}</td>
+          <td class="py-2 px-2 text-center">
+            <input type="number" min="1" value="${C}" onchange="updateSubjectVal('${subj}', 'C', this.value)" class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-center text-xs focus:border-blue-500 focus:outline-none" />
+          </td>
+          <td class="py-2 px-2 text-center">
+            <input type="number" min="0" value="${A}" onchange="updateSubjectVal('${subj}', 'A', this.value)" class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-center text-xs focus:border-blue-500 focus:outline-none" />
+          </td>
+          <td class="py-2 px-2 text-center">
+            <input type="number" min="0" value="${OD}" onchange="updateSubjectVal('${subj}', 'OD', this.value)" class="w-14 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-center text-xs focus:border-emerald-500 focus:outline-none text-emerald-400 font-medium" />
+          </td>
+          <td class="py-3 px-2 text-center font-semibold text-indigo-300">${R} hrs</td>
+          <td class="py-3 px-2 text-center">
+            <span class="px-2 py-1 rounded-md text-xs font-bold border ${statusBadgeClass}">
+              ${currentPct.toFixed(1)}%
+            </span>
+          </td>
+          <td class="py-3 px-2 text-center font-medium ${req75 > R ? 'text-rose-400 font-bold' : 'text-slate-300'}">
+            ${req75 > R ? 'Impossible' : req75 + ' hrs'}
+          </td>
+          <td class="py-3 px-2 text-center font-medium ${req90 > R ? 'text-amber-400' : 'text-slate-300'}">
+            ${req90 > R ? 'Unreachable' : req90 + ' hrs'}
+          </td>
+          <td class="py-3 px-2 text-center font-bold ${isIrreversible ? 'text-rose-400' : 'text-amber-400'}">
+            ${isIrreversible ? '<span class="text-[10px] bg-rose-500/20 px-1.5 py-0.5 rounded border border-rose-500/30">0 (Detained)</span>' : safeBunks + ' hrs'}
+          </td>
+          <td class="py-3 px-2 text-center font-bold text-indigo-400">
+            ${maxPossible.toFixed(1)}%
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Overall Totals
+      const overallCurrentPct = totalC > 0 ? (totalA / totalC) * 100 : 0;
+      const overallMaxPct = (totalC + totalR) > 0 ? ((totalA + totalR) / (totalC + totalR)) * 100 : 0;
+      
+      let overallReq75 = Math.ceil(0.75 * (totalC + totalR) - totalA);
+      if (overallReq75 <= 0) overallReq75 = 0;
+      const overallSafeBunks = Math.max(0, totalR - overallReq75);
+
+      // Update KPI Elements
+      document.getElementById("kpiOverallPct").innerText = `${overallCurrentPct.toFixed(1)}%`;
+      document.getElementById("kpiMaxPossible").innerText = `${overallMaxPct.toFixed(1)}%`;
+      document.getElementById("kpiSafeBunks").innerText = `${overallSafeBunks} hrs`;
+      document.getElementById("kpiODCount").innerText = `${totalOD} Days`;
+
+      const kpiStatus = document.getElementById("kpiOverallStatus");
+      if (overallCurrentPct >= 75) {
+        kpiStatus.innerText = "Safe (Above 75%)";
+        kpiStatus.className = "text-xs font-semibold text-emerald-400 mt-0.5";
+      } else if (overallCurrentPct >= 70) {
+        kpiStatus.innerText = "Warning (Near 75%)";
+        kpiStatus.className = "text-xs font-semibold text-amber-400 mt-0.5";
+      } else {
+        kpiStatus.innerText = "Critical Danger!";
+        kpiStatus.className = "text-xs font-semibold text-rose-400 mt-0.5";
+      }
+
+      // Show/Hide Global Detention Banner
+      const banner = document.getElementById("detentionAlertBanner");
+      if (hasIrreversibleDetention) {
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+
+      // Refresh Visual Charts
+      renderCharts(chartLabels, currentPcts, maxPcts);
+
+      // Refresh Simulation logic
+      runLeaveSimulation();
+      
+      saveAppState();
+    }
+
+    function updateSubjectVal(subj, key, val) {
+      appState[currentSection][subj][key] = Math.max(0, Number(val) || 0);
+      updateCalculations();
+    }
+
+    function switchSection(newSec) {
+      currentSection = newSec;
+      document.getElementById("chatSectionTag").innerText = newSec;
+      updateCalculations();
+    }
+
+    function setLeaveMode(mode) {
+      leaveMode = mode;
+      const odBtn = document.getElementById("modeODBtn");
+      const mlBtn = document.getElementById("modeMLBtn");
+      if (mode === "OD") {
+        odBtn.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-emerald-600 text-white";
+        mlBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition";
+      } else {
+        mlBtn.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-indigo-600 text-white";
+        odBtn.className = "px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition";
+      }
+      updateCalculations();
+    }
+
+    function resetData() {
+      localStorage.removeItem("attendance_app_state_v2");
+      appState = {};
+      initAppState();
+      updateCalculations();
+    }
+
+    // Chart Render Handler
+    function renderCharts(labels, currentPcts, maxPcts) {
+      // 1. Bar Chart: Current vs Max vs 75% Line
+      const ctxBar = document.getElementById("subjectBarChart").getContext("2d");
+      
+      if (subjectBarChart) subjectBarChart.destroy();
+
+      const barColors = currentPcts.map(val => {
+        if (val >= 75) return "rgba(16, 185, 129, 0.85)"; // Emerald
+        if (val >= 70) return "rgba(245, 158, 11, 0.85)"; // Amber
+        return "rgba(244, 63, 94, 0.85)";                // Rose
+      });
+
+      subjectBarChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Current %',
+              data: currentPcts,
+              backgroundColor: barColors,
+              borderRadius: 6,
+              barPercentage: 0.5
+            },
+            {
+              label: 'Max Possible %',
+              data: maxPcts,
+              backgroundColor: 'rgba(139, 92, 246, 0.3)',
+              borderColor: 'rgba(139, 92, 246, 0.8)',
+              borderWidth: 1,
+              borderRadius: 6,
+              barPercentage: 0.5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', font: { size: 10 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', font: { size: 11 } }
+            }
+          }
+        }
+      });
+
+      // 2. Radar Chart: Health Radar
+      const ctxRadar = document.getElementById("healthRadarChart").getContext("2d");
+      if (healthRadarChart) healthRadarChart.destroy();
+
+      healthRadarChart = new Chart(ctxRadar, {
+        type: 'radar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Current Attendance',
+              data: currentPcts,
+              fill: true,
+              backgroundColor: 'rgba(59, 130, 246, 0.25)',
+              borderColor: '#3b82f6',
+              pointBackgroundColor: '#3b82f6',
+            },
+            {
+              label: '75% Target',
+              data: labels.map(() => 75),
+              borderColor: 'rgba(16, 185, 129, 0.8)',
+              borderDash: [5, 5],
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0,
+              max: 100,
+              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 9 } },
+              ticks: { display: false }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    // Leave Simulation Engine
+    function runLeaveSimulation() {
+      const startDateVal = document.getElementById("simStartDate").value;
+      const endDateVal = document.getElementById("simEndDate").value;
+      const flatDays = Number(document.getElementById("simFlatHours").value) || 0;
+
+      const secData = appState[currentSection];
+      let simTotalC = 0;
+      let simTotalA = 0;
+
+      Object.keys(secData).forEach(subj => {
+        let { C, A, OD } = secData[subj];
+        let leaveHours = calculateRemainingClasses(subj, currentSection, startDateVal, endDateVal);
+        leaveHours += (flatDays * 1); // approximate 1 hour per subject per flat day
+
+        let effC = C;
+        let effA = A;
+        if (leaveMode === "OD") {
+          effA = A + OD + leaveHours; // Simulated OD approved
+        } else {
+          effC = Math.max(1, (C + leaveHours) - (OD + leaveHours)); // ML waived
+        }
+        simTotalC += effC;
+        simTotalA += effA;
+      });
+
+      const baseCurrentPct = parseFloat(document.getElementById("kpiOverallPct").innerText) || 0;
+      const simPct = simTotalC > 0 ? (simTotalA / simTotalC) * 100 : 0;
+      const diff = simPct - baseCurrentPct;
+
+      document.getElementById("simResultPct").innerText = `${simPct.toFixed(1)}%`;
+      document.getElementById("simDiffPct").innerText = `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+      
+      const simStatus = document.getElementById("simResultStatus");
+      if (simPct >= 75) {
+        simStatus.innerText = "Safe! Leave simulation maintains overall attendance above 75%.";
+        simStatus.className = "text-[11px] text-emerald-400 mt-0.5 font-medium";
+      } else {
+        simStatus.innerText = "Warning! Leave simulation drops overall attendance below 75% threshold.";
+        simStatus.className = "text-[11px] text-rose-400 mt-0.5 font-semibold";
+      }
+    }
+
+    // Chatbot UI Toggle
+    function toggleChatWindow() {
+      const win = document.getElementById("chatWindow");
+      win.classList.toggle("hidden");
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById("chatInput").value = promptText;
+      handleUserMessage();
+    }
+
+    // Handle user prompt submit
+    async function handleUserMessage() {
+      const inputEl = document.getElementById("chatInput");
+      const userText = inputEl.value.trim();
+      if (!userText) return;
+
+      inputEl.value = "";
+      appendChatMessage("user", userText);
+
+      // Show typing indicator
+      const typingId = appendChatMessage("assistant", "Thinking & calculating...", true);
+
+      try {
+        // Build prompt context from current dashboard state
+        const contextPayload = {
+          section: currentSection,
+          targetDate: document.getElementById("targetDatePicker").value,
+          subjects: appState[currentSection]
+        };
+
+        const reply = await callAttendanceAdvisorAI(userText, contextPayload);
+        removeChatMessage(typingId);
+        appendChatMessage("assistant", reply);
+      } catch (err) {
+        removeChatMessage(typingId);
+        // Fallback local rule engine
+        const fallbackReply = generateRuleEngineResponse(userText);
+        appendChatMessage("assistant", fallbackReply);
+      }
+    }
+
+    function appendChatMessage(sender, text, isTyping = false) {
+      const msgContainer = document.getElementById("chatMessages");
+      const msgId = "msg-" + Date.now();
+      const div = document.createElement("div");
+      div.id = msgId;
+
+      if (sender === "user") {
+        div.className = "flex items-start justify-end gap-2";
+        div.innerHTML = `
+          <div class="bg-blue-600 text-white p-2.5 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-[85%] shadow-sm">
+            ${escapeHtml(text)}
+          </div>
+        `;
+      } else {
+        div.className = "flex items-start gap-2";
+        div.innerHTML = `
+          <div class="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="bg-slate-800 text-slate-200 p-2.5 rounded-2xl rounded-tl-none border border-slate-700/60 leading-relaxed max-w-[85%] ${isTyping ? 'animate-pulse text-slate-400' : ''}">
+            ${text}
+          </div>
+        `;
+      }
+
+      msgContainer.appendChild(div);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+      return msgId;
+    }
+
+    function removeChatMessage(msgId) {
+      const el = document.getElementById(msgId);
+      if (el) el.remove();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+    }
+
+    // Call Gemini API (gemini-2.5-flash) with dynamic context injection
+    async function callAttendanceAdvisorAI(userQuery, context) {
+      const apiKey = ""; // Built-in runtime API Key handled automatically
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const systemPrompt = `
+You are the "Attendance Advisor" AI assistant integrated into an academic dashboard.
+Current Student Context for Section ${context.section}:
+- Target Semester End Date: ${context.targetDate}
+- Subject Attendance Snapshot:
+${JSON.stringify(context.subjects, null, 2)}
+
+Rules for your response:
+1. Answer the user's specific query using exact calculations from their snapshot.
+2. If they ask about taking leave/sick leave starting tomorrow, calculate missed classes for each subject according to timetable and state if any subject drops below 75%.
+3. Highlight danger zone subjects (< 75%).
+4. Keep responses direct, helpful, concise, and structured with clear markdown bullet points.
+`;
+
+      const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        }
+      };
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("Gemini API request failed");
+      const data = await res.json();
+      const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!replyText) throw new Error("Invalid response format");
+      
+      // Convert standard markdown bold/lists to html
+      return replyText
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>');
+    }
+
+    // Built-in Smart Rule Engine (Offline / Fallback Solver)
+    function generateRuleEngineResponse(query) {
+      const secData = appState[currentSection];
+      const qLower = query.toLowerCase();
+
+      if (qLower.includes("sick leave") || qLower.includes("3-day") || qLower.includes("leave")) {
+        let warningSubjs = [];
+        Object.keys(secData).forEach(subj => {
+          let { C, A } = secData[subj];
+          // Assume 3 missed classes per subject over 3 days
+          let simC = C + 3;
+          let simPct = (A / simC) * 100;
+          if (simPct < 75) {
+            warningSubjs.push(`${subj} (${simPct.toFixed(1)}%)`);
+          }
+        });
+
+        if (warningSubjs.length > 0) {
+          return `⚠️ <strong>Warning:</strong> Taking a 3-day leave will drop the following subjects below 75%:<br/>• ${warningSubjs.join('<br/>• ')}<br/><br/>Consider submitting On-Duty (OD) medical proof immediately!`;
+        } else {
+          return `✅ <strong>Good news:</strong> Taking a 3-day leave will keep all your subjects above 75%!`;
+        }
+      }
+
+      if (qLower.includes("danger") || qLower.includes("critical") || qLower.includes("low")) {
+        let dangerList = [];
+        Object.keys(secData).forEach(subj => {
+          let { C, A } = secData[subj];
+          let pct = C > 0 ? (A / C) * 100 : 0;
+          if (pct < 75) {
+            dangerList.push(`${subj} (${pct.toFixed(1)}%)`);
+          }
+        });
+
+        if (dangerList.length > 0) {
+          return `🚨 <strong>Subjects currently in Danger Zone (&lt;75%):</strong><br/>• ${dangerList.join('<br/>• ')}`;
+        } else {
+          return `🎉 All your subjects are currently safe and above the 75% threshold!`;
+        }
+      }
+
+      return `Based on your dashboard data for <strong>${currentSection}</strong>, your overall attendance is <strong>${document.getElementById("kpiOverallPct").innerText}</strong>. Make sure to maintain all individual subjects above 75% to avoid detention alerts.`;
+    }
+
+    // Onload Startup
+    window.onload = function() {
+      initAppState();
+      updateCalculations();
+    };
+  </script>
+</body>
+</html>
